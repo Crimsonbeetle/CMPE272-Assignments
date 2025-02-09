@@ -1,0 +1,46 @@
+---
+- name: Deploy Webserver on VM1 and VM2
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Install Apache
+      apt:
+        name: apache2
+        state: present
+        update_cache: yes
+
+    - name: Start and Enable Apache
+      service:
+        name: apache2
+        state: started
+        enabled: yes
+
+    - name: Configure Apache to Listen on Port 8080
+      lineinfile:
+        path: /etc/apache2/ports.conf
+        regexp: '^Listen'
+        line: 'Listen 8080'
+        create: yes
+      notify:
+        - Restart Apache
+
+    - name: Deploy Custom Web Page
+      copy:
+        dest: /var/www/html/index.html
+        content: |
+          <html>
+          <head><title>Hello World</title></head>
+          <body><h1>Hello World from SJSU-{{ inventory_hostname[-1] }}</h1></body>
+          </html>
+        owner: www-data
+        group: www-data
+        mode: '0644'
+      notify:
+        - Restart Apache
+
+  handlers:
+    - name: Restart Apache
+      service:
+        name: apache2
+        state: restarted
